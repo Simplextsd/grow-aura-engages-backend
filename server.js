@@ -38,7 +38,77 @@ app.use("/api/packages", require("./routes/packageRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
 
 /* ============================================================
-    🚀 NEW: SAVE BOOKING FROM DIALOG (MUKAMAL READY)
+    🚀 NEW: UPDATE BOOKING FROM DIALOG (MASTERS LOGIC)
+   ============================================================ */
+
+// Is route ko maine add kiya hai jo aapke edit dialog ko handle karega
+app.put("/api/bookings/update/:id", async (req, res) => {
+  const bookingId = req.params.id;
+  const data = req.body;
+
+  const sql = `
+    UPDATE bookings SET 
+      customerName = ?, 
+      travelDate = ?, 
+      returnDate = ?, 
+      status = ?, 
+      airline = ?, 
+      flightNo = ?, 
+      depCity = ?, 
+      arrCity = ?, 
+      depTime = ?, 
+      arrTime = ?, 
+      hotelName = ?, 
+      roomType = ?, 
+      mealPlan = ?, 
+      checkIn = ?, 
+      checkOut = ?, 
+      vehicle = ?, 
+      pickup = ?, 
+      dropoff = ?, 
+      paxCount = ?, 
+      specialRequests = ?
+    WHERE id = ?`;
+
+  const values = [
+    data.customerName,
+    data.travelDate,
+    data.returnDate || null,
+    data.status,
+    data.airline || "",
+    data.flightNo || "",
+    data.depCity || "",
+    data.arrCity || "",
+    data.depTime || null,
+    data.arrTime || null,
+    data.hotelName || "",
+    data.roomType || "",
+    data.mealPlan || "",
+    data.checkIn || null,
+    data.checkOut || null,
+    data.vehicle || "",
+    data.pickup || "",
+    data.dropoff || "",
+    data.paxCount || 1,
+    data.specialRequests || "",
+    bookingId
+  ];
+
+  try {
+    const [result] = await db.query(sql, values);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Booking not found" });
+    }
+    console.log(`✅ Booking ${bookingId} updated successfully`);
+    res.status(200).json({ success: true, message: "Booking updated successfully" });
+  } catch (err) {
+    console.error("❌ MySQL Update Error:", err.message);
+    res.status(500).json({ error: "Database error: " + err.message });
+  }
+});
+
+/* ============================================================
+    🚀 SAVE BOOKING FROM DIALOG
    ============================================================ */
 
 app.post("/api/bookings/create", async (req, res) => {
@@ -252,8 +322,6 @@ app.get("/api/courses/all", async (req, res) => {
 
 app.post("/api/courses/create", async (req, res) => {
   const { title, description, thumbnail_url, target_audience, duration } = req.body;
-  
-  // 🚀 Published ko by default 1 aur thumbnail_url ko map kiya gaya hai
   const sql = "INSERT INTO courses (title, description, thumbnail_url, target_audience, duration, is_published) VALUES (?, ?, ?, ?, ?, 1)";
   
   try {
