@@ -1,16 +1,14 @@
 const express = require("express");
 const router = express.Router();
-
-// ✅ Controller ka sahi path
 const bookingController = require("../config/controllers/bookingController");
 
-// 🟢 Route for Adding
-router.post("/add", bookingController.addBooking);
+// Debugging ke liye: Agar ye console mein 'undefined' aaye to matlab path galat hai
+console.log("Check Controller Functions:", bookingController);
 
-// 🔵 Route for Fetching all
+// Route for adding booking
+router.post("/", bookingController.addBooking);
+
+// Route for getting all bookings (Aapka frontend /api/bookings/all par call kar raha hai)
 router.get("/all", bookingController.getBookings);
-
-// 🟡 Route for Updating (Edit)
-router.put("/update/:id", bookingController.updateBooking);
 
 module.exports = router;
