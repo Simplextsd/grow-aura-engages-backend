@@ -102,7 +102,7 @@ app.put("/api/bookings/update/:id", async (req, res) => {
     console.log(`✅ Booking ${bookingId} updated successfully`);
     res.status(200).json({ success: true, message: "Booking updated successfully" });
   } catch (err) {
-    console.error("❌ MySQL Update Error:", err.message);
+    console.error("❌  Update Error:", err.message);
     res.status(500).json({ error: "Database error: " + err.message });
   }
 });
@@ -148,7 +148,7 @@ app.post("/api/bookings/create", async (req, res) => {
       id: result.insertId 
     });
   } catch (err) {
-    console.error("❌ MySQL Booking Error:", err.message);
+    console.error("❌ Booking Error:", err.message);
     res.status(500).json({ error: "Database error: " + err.message });
   }
 });
@@ -172,7 +172,7 @@ app.post("/api/itineraries/add", async (req, res) => {
       id: result.insertId 
     });
   } catch (err) {
-    console.error("❌ MySQL Error:", err.message);
+    console.error("❌  Error:", err.message);
     res.status(500).json({ error: "Failed to save itinerary in database" });
   }
 });
@@ -187,9 +187,7 @@ app.get("/api/itineraries", async (req, res) => {
   }
 });
 
-/* ============================================================
-    📄 7. INVOICES MANAGEMENT API (WITH PDF GENERATION)
-   ============================================================ */
+
 
 app.post("/api/invoices", async (req, res) => {
   const { 
@@ -226,7 +224,7 @@ app.post("/api/invoices", async (req, res) => {
     console.log("✅ Invoice Saved ID:", invResult.insertId);
     res.status(200).json({ 
       success: true,
-      message: "✅ Invoice successfully saved to MySQL", 
+      message: "✅ Invoice successfully saved ", 
       id: invResult.insertId 
     });
 
@@ -315,7 +313,7 @@ app.get("/api/courses/all", async (req, res) => {
     const [results] = await db.query(sql);
     res.json(results);
   } catch (err) {
-    console.error("❌ MySQL Fetch Error:", err.message);
+    console.error("❌  Fetch Error:", err.message);
     res.status(500).json({ error: "Failed to fetch courses" });
   }
 });
@@ -329,8 +327,8 @@ app.post("/api/courses/create", async (req, res) => {
     console.log("✅ New Course Added to MySQL! ID:", result.insertId);
     res.status(200).json({ success: true, message: "✅ Course Created", id: result.insertId });
   } catch (err) {
-    console.error("❌ MySQL Error during create:", err.message);
-    res.status(500).json({ error: "MySQL issue: " + err.message });
+    console.error("❌  Error during create:", err.message);
+    res.status(500).json({ error: " issue: " + err.message });
   }
 });
 

@@ -49,7 +49,7 @@ router.post("/add", async (req, res) => {
         });
         
     } catch (err) {
-        console.error("❌ MySQL Error:", err.message);
+        console.error("❌ Error:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
