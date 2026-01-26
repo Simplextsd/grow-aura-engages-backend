@@ -328,7 +328,7 @@ app.post("/api/courses/create", async (req, res) => {
     res.status(200).json({ success: true, message: "✅ Course Created", id: result.insertId });
   } catch (err) {
     console.error("❌  Error during create:", err.message);
-    res.status(500).json({ error: " issue: " + err.message });
+    res.status(500).json({ error: "  issue: " + err.message });
   }
 });
 
