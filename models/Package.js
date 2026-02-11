@@ -4,8 +4,8 @@ const PackageSchema = new mongoose.Schema({
   packageName: { type: String, required: true },
   price: { type: Number, required: true },
   description: { type: String },
-  duration: { type: String }, // e.g., "7 Days"
-  features: { type: [String] }, // e.g., ["Hotel", "Food"]
+  duration: { type: String },
+  features: { type: [String] },
   status: { type: String, default: "active" }
 }, { timestamps: true });
 

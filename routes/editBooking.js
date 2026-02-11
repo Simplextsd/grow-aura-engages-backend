@@ -4,19 +4,17 @@ const db = require("../config/db");
 
 router.put("/update/:id", (req, res) => {
     const bookingId = req.params.id;
-    // Frontend se bhejey gaye data ko nikaalna
-    const { 
-        customerName, 
-        packageId, 
-        travelDate, 
-        returnDate, 
-        numberOfTravelers, 
-        totalAmount, 
-        specialRequests, 
-        status 
-    } = req.body;
 
-    // SQL Query - Columns ke naam MySQL Structure ke mutabiq hain
+    const {
+        customerName,
+        packageId,
+        travelDate,
+        returnDate,
+        numberOfTravelers,
+        totalAmount,
+        specialRequests,
+        status
+    } = req.body;
     const sql = `
         UPDATE bookings SET 
             customerName = ?, 
@@ -31,18 +29,18 @@ router.put("/update/:id", (req, res) => {
     `;
 
     db.query(sql, [
-        customerName, 
-        packageId, 
-        travelDate, 
-        returnDate, 
-        numberOfTravelers, 
-        totalAmount, 
-        specialRequests, 
-        status, 
+        customerName,
+        packageId,
+        travelDate,
+        returnDate,
+        numberOfTravelers,
+        totalAmount,
+        specialRequests,
+        status,
         bookingId
     ], (err, result) => {
         if (err) {
-            console.error("❌ Database Error:", err.message);
+            console.error("error:", err.message);
             return res.status(500).json({ error: "Update failed: " + err.message });
         }
         res.json({ success: true, message: "Booking updated!" });
