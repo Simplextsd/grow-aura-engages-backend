@@ -15,7 +15,6 @@ async function getUserInfo(psid) {
   try {
     const r = await axios.get(graphUrl(`/${psid}`), {
       params: {
-        // name field + fallbacks
         fields: "name,first_name,last_name,profile_pic",
         access_token: PAGE_ACCESS_TOKEN,
       },
@@ -67,11 +66,9 @@ router.post("/webhook", async (req, res) => {
 
         console.log(`📩 FB Message | page:${page_id} | from:${sender_id} | text:${msgText}`);
 
-        // ✅ Fetch name (every time OR only when missing)
         const profile = await getUserInfo(sender_id);
         const customerName = profile.name;
 
-        // 1) Conversation find
         const [convRows] = await db.query(
           `SELECT id FROM conversations 
            WHERE platform='facebook' AND page_id=? AND sender_id=? 
@@ -91,29 +88,20 @@ router.post("/webhook", async (req, res) => {
           );
         } else {
           const [ins] = await db.query(
-            `INSERT INTO conversations (platform, page_id, sender_id, customer_name, last_message, last_message_at)
+            `INSERT INTO conversations 
+             (platform, page_id, sender_id, customer_name, last_message, last_message_at)
              VALUES ('facebook', ?, ?, ?, ?, NOW())`,
             [page_id, sender_id, customerName, msgText]
           );
           conversation_id = ins.insertId;
         }
 
-        // 2) Save incoming message
         await db.query(
-          `INSERT INTO messages (conversation_id, platform, page_id, sender_id, direction, message_text, meta_message_id)
+          `INSERT INTO messages 
+           (conversation_id, platform, page_id, sender_id, direction, message_text, meta_message_id)
            VALUES (?, 'facebook', ?, ?, 'incoming', ?, ?)`,
           [conversation_id, page_id, sender_id, msgText, meta_message_id]
         );
-
-        // ❌ AUTO REPLY REMOVED (as you requested)
-        // try {
-        //   await axios.post(graphUrl(`/me/messages`), {
-        //     recipient: { id: sender_id },
-        //     message: { text: "Auto reply..." }
-        //   }, {
-        //     params: { access_token: PAGE_ACCESS_TOKEN }
-        //   });
-        // } catch (apiErr) {}
       }
     }
   } catch (err) {
@@ -143,28 +131,48 @@ router.post("/reply", async (req, res) => {
       [conversationId]
     );
 
-    if (!convRows[0]) return res.status(404).json({ success: false, error: "No conversation found" });
+    if (!convRows[0]) {
+      return res.status(404).json({ success: false, error: "No conversation found" });
+    }
 
     const conv = convRows[0];
 
-    // ✅ Send manual message
+    console.log("📤 Sending reply to PSID:", conv.sender_id);
+    console.log("📄 Using Page ID:", conv.page_id);
+
+    // ✅ FIXED: Use PAGE_ID instead of "me"
     const fbRes = await axios.post(
-      graphUrl(`/me/messages`),
-      { recipient: { id: conv.sender_id }, message: { text: messageText } },
-      { params: { access_token: PAGE_ACCESS_TOKEN } }
+      `https://graph.facebook.com/${GRAPH_VERSION}/${conv.page_id}/messages`,
+      {
+        recipient: { id: conv.sender_id },
+        message: { text: messageText }
+      },
+      {
+        params: { access_token: PAGE_ACCESS_TOKEN }
+      }
     );
 
-    // Save outgoing
     await db.query(
-      `INSERT INTO messages (conversation_id, platform, page_id, sender_id, direction, message_text, meta_message_id)
+      `INSERT INTO messages 
+       (conversation_id, platform, page_id, sender_id, direction, message_text, meta_message_id)
        VALUES (?, 'facebook', ?, ?, 'outgoing', ?, ?)`,
-      [conv.id, conv.page_id, conv.sender_id, messageText, fbRes.data?.message_id || null]
+      [
+        conv.id,
+        conv.page_id,
+        conv.sender_id,
+        messageText,
+        fbRes.data?.message_id || null
+      ]
     );
 
     res.json({ success: true, fb: fbRes.data });
+
   } catch (err) {
     console.error("❌ Reply API Error:", err.response?.data || err.message);
-    res.status(400).json({ success: false, error: err.response?.data || err.message });
+    res.status(400).json({
+      success: false,
+      error: err.response?.data || err.message
+    });
   }
 });
 
