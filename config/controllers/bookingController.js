@@ -85,28 +85,53 @@ const addBooking = async (req, res) => {
        🔥 CORRECT INSERT QUERY
     =============================== */
 
-    const [result] = await db.query(
-      `INSERT INTO bookings 
-       (customerName, items_json, totalAmount, paid_amount, balance_amount) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        customer_name,
-        JSON.stringify(itemsObj),
-        totalAmount,
-        paidAmount,
-        balanceAmount,
-      ]
-    );
+   const [result] = await db.query(
+  `INSERT INTO bookings 
+   (customerName, items_json, totalAmount, paid_amount, balance_amount) 
+   VALUES (?, ?, ?, ?, ?)`,
+  [
+    customer_name,
+    JSON.stringify(itemsObj),
+    totalAmount,
+    paidAmount,
+    balanceAmount,
+  ]
+);
 
-    res.status(201).json({
-      success: true,
-      id: result.insertId,
-    });
+/* ===============================
+   AUTO CREATE INVOICE
+================================ */
 
-  } catch (err) {
-    console.error("Add Booking Error:", err);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
+try {
+  await db.query(
+    `INSERT INTO invoices
+    (invoice_number, booking_id, customer_name, currency, exchange_rate, total_amount, paid_amount, balance_amount, payment_method, items_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      "INV-" + result.insertId,
+      result.insertId,
+      customer_name,
+      "USD",
+      1,
+      totalAmount,
+      paidAmount,
+      balanceAmount,
+      "In-Hand",
+      JSON.stringify(itemsObj)
+    ]
+  );
+} catch (err) {
+  console.log("Invoice Auto Create Error:", err);
+}
+res.status(201).json({
+  success: true,
+  id: result.insertId,
+});
+
+} catch (err) {
+  console.error("Add Booking Error:", err);
+  res.status(500).json({ success: false, message: "Server Error" });
+}
 };
 
 /* =====================================================

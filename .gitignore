@@ -1,2 +1,7 @@
-node_modules
-.envgit 
+node_modules/
+
+.wwebjs_auth/
+.wwebjs_cache/
+session-*/
+
+*.log

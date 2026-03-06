@@ -1,73 +1,142 @@
 const express = require("express");
 const router = express.Router();
-const path = require('path');
-console.log("Checking DB path:", path.resolve(__dirname, '../config/db.js'));
-const db = require("../config/db");
 const axios = require("axios");
+const db = require("../config/db");
 
-/* SAVE INTEGRATION */
-router.post("/save", async (req, res) => {
-  const { platform, credentials } = req.body;
+/* TEST META TOKEN */
 
-  await db.query(
-    `INSERT INTO integrations (platform, credentials, is_connected)
-     VALUES (?, ?, 0)
-     ON DUPLICATE KEY UPDATE credentials=VALUES(credentials)`,
-    [platform, JSON.stringify(credentials)]
-  );
-
-  res.json({ success: true });
-});
-
-/* TEST FACEBOOK + INSTAGRAM */
 router.post("/meta/test", async (req, res) => {
+
   try {
+
     const { accessToken } = req.body;
 
     if (!accessToken) {
-      return res.status(400).json({ message: "Access token missing" });
+      return res.status(400).json({
+        success:false,
+        message:"Access token missing"
+      });
     }
 
     const response = await axios.get(
       `https://graph.facebook.com/v20.0/me?access_token=${accessToken}`
     );
 
-    if (!response.data || !response.data.id) {
-      return res.status(400).json({ message: "Invalid token" });
-    }
-
-    return res.json({ success: true });
+    return res.json({
+      success:true,
+      user:response.data
+    });
 
   } catch (error) {
-    console.error("META TEST ERROR:", error.response?.data || error.message);
+
+    console.error(error.response?.data || error.message);
+
     return res.status(400).json({
-      message: "Invalid details",
-      error: error.response?.data || error.message,
+      success:false,
+      message:"Invalid token"
     });
+
   }
+
 });
 
-router.get("/status", async (req, res) => {
+
+router.post("/save", async (req, res) => {
+
   try {
-    const [rows] = await db.query("SELECT platform, is_connected FROM integrations");
 
-    const result = {
-      whatsapp: false,
-      facebook: false,
-      instagram: false,
-      email: false,
-    };
+    const { platform, pageId, accessToken } = req.body;
 
-    rows.forEach(row => {
-      result[row.platform] = row.is_connected === 1;
+    if (!platform) {
+      return res.status(400).json({
+        success:false,
+        message:"Platform missing"
+      });
+    }
+
+    await db.query(
+      `INSERT INTO integrations (platform,page_id,access_token,is_connected)
+       VALUES (?,?,?,1)
+       ON DUPLICATE KEY UPDATE
+       page_id=VALUES(page_id),
+       access_token=VALUES(access_token),
+       is_connected=1`,
+      [platform,pageId || null,accessToken || null]
+    );
+
+    res.json({
+      success:true,
+      message:"Integration connected"
     });
 
-    res.json(result);
+  } catch (error) {
+
+    console.error("SAVE ERROR:",error);
+
+    res.status(500).json({
+      success:false,
+      message:"Server error"
+    });
+
+  }
+
+});
+
+
+/* GET STATUS */
+
+router.get("/status", async (req,res)=>{
+
+  const [rows] = await db.query(
+    "SELECT platform,status FROM integrations"
+  );
+
+  const result={
+    whatsapp:false,
+    facebook:false,
+    instagram:false,
+    email:false
+  };
+
+ rows.forEach(r=>{
+  const platform = String(r.platform).toLowerCase();
+  if (result.hasOwnProperty(platform)) {
+    result[platform] = r.status === "connected";
+  }
+});
+/* DISCONNECT INTEGRATION */
+
+router.delete("/:platform", async (req, res) => {
+
+  try {
+
+    const { platform } = req.params;
+
+    await db.query(
+      "DELETE FROM integrations WHERE platform=?",
+      [platform]
+    );
+
+    res.json({
+      success: true,
+      message: "Integration disconnected"
+    });
 
   } catch (error) {
-    console.error("STATUS ERROR:", error);
-    res.status(500).json({ error: error.message });
+
+    console.error("DISCONNECT ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+
   }
+
+});
+
+  res.json(result);
+
 });
 
 module.exports = router;

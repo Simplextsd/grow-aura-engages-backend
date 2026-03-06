@@ -1,78 +1,34 @@
-const db = require("../../db"); // apna db connection file
+const db = require("../db");
 
-exports.handleIncomingMessage = async (req, res) => {
-  try {
-    const body = req.body;
+exports.verifyWebhook = (req, res) => {
 
-    if (body.object !== "page") {
-      return res.sendStatus(404);
-    }
+  const VERIFY_TOKEN = "crm_verify_token";
 
-    for (const entry of body.entry) {
-      for (const event of entry.messaging) {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
 
-        // Only handle messages
-        if (!event.message) continue;
-
-        const senderId = event.sender.id;
-
-        // Handle text
-        let messageText = event.message.text || "";
-
-        // Handle attachments (image, sticker etc)
-        if (!messageText && event.message.attachments) {
-          messageText = "[Attachment]";
-        }
-
-        console.log(`📩 Naya Message [Sender: ${senderId}]: ${messageText}`);
-
-        try {
-          // 1️⃣ Check if conversation exists
-          let [existingConv] = await db.query(
-            "SELECT id FROM conversations WHERE sender_id = ?",
-            [senderId]
-          );
-
-          let conversationId;
-
-          if (existingConv.length === 0) {
-            // 2️⃣ Create conversation
-            const [newConv] = await db.query(
-              "INSERT INTO conversations (sender_id, last_message, last_message_at) VALUES (?, ?, NOW())",
-              [senderId, messageText]
-            );
-
-            conversationId = newConv.insertId;
-
-            console.log("🆕 New conversation created:", conversationId);
-          } else {
-            conversationId = existingConv[0].id;
-
-            // Update last message
-            await db.query(
-              "UPDATE conversations SET last_message = ?, last_message_at = NOW() WHERE id = ?",
-              [messageText, conversationId]
-            );
-          }
-
-          // 3️⃣ Save message
-          await db.query(
-            "INSERT INTO messages (conversation_id, direction, message_text, created_at) VALUES (?, ?, ?, NOW())",
-            [conversationId, "incoming", messageText]
-          );
-
-          console.log("✅ Message saved in DB");
-
-        } catch (dbError) {
-          console.error("❌ DB Error:", dbError);
-        }
-      }
-    }
-
-    return res.sendStatus(200);
-
-  } catch (error) {
-    console.error("❌ Webhook Error:", error);
-    return res.sendStatus(500);
+  if (mode && token === VERIFY_TOKEN) {
+    return res.status(200).send(challenge);
   }
+
+  res.sendStatus(403);
+};
+
+exports.receiveMessage = async (req, res) => {
+
+  const entry = req.body.entry?.[0];
+  const messaging = entry?.messaging?.[0];
+
+  if (!messaging) return res.sendStatus(200);
+
+  const sender = messaging.sender?.id;
+  const message = messaging.message?.text;
+
+  await db.query(
+    "INSERT INTO messages (conversation_id, channel, message_text, direction) VALUES (?, ?, ?, ?)",
+    [sender, "messenger", message, "incoming"]
+  );
+
+  res.sendStatus(200);
 };

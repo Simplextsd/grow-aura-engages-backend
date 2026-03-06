@@ -86,7 +86,7 @@ router.post("/reply", async (req, res) => {
   }
 });
 
-// ✅ Webhook verify
+
 router.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];

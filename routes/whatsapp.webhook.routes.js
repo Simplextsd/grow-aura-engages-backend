@@ -30,60 +30,68 @@ router.get("/webhook", async (req, res) => {
   }
 });
 
-/**
- * POST /webhook (incoming messages)
- * WhatsApp Cloud API payload format
- */
-router.post("/webhook", async (req, res) => {
+
+ router.post("/webhook", async (req, res) => {
+
   try {
+
+    console.log("WHATSAPP WEBHOOK:", JSON.stringify(req.body, null, 2));
+
     const body = req.body;
 
-    if (body.object !== "whatsapp_business_account") {
-      return res.sendStatus(404);
+    if (!body.entry) return res.sendStatus(200);
+
+    for (const entry of body.entry) {
+
+      for (const change of entry.changes || []) {
+
+        const value = change.value;
+
+        if (!value.messages) continue;
+
+        const wa_to = value.metadata?.display_phone_number || "";
+
+        for (const msg of value.messages) {
+
+          const wa_from = msg.from;
+          const wa_message_id = msg.id;
+          const text = msg.text?.body || "";
+
+          console.log("Incoming message:", wa_from, text);
+
+          // save contact
+          await db.query(`
+            INSERT INTO whatsapp_contacts (wa_phone,last_message,last_message_at)
+            VALUES (?,?,NOW())
+            ON DUPLICATE KEY UPDATE
+              last_message=VALUES(last_message),
+              last_message_at=NOW()
+          `,[wa_from,text]);
+
+          // save message
+          await db.query(`
+            INSERT INTO whatsapp_messages
+            (wa_message_id,wa_from,wa_to,direction,message_text)
+            VALUES (?,?,?,?,?)
+          `,[wa_message_id,wa_from,wa_to,'incoming',text]);
+
+        }
+
+      }
+
     }
 
-    const entry = body.entry?.[0];
-    const changes = entry?.changes?.[0];
-    const value = changes?.value;
+    return res.sendStatus(200);
 
-    const messages = value?.messages || [];
-    const metadata = value?.metadata || {};
-    const wa_to = metadata?.display_phone_number || "";
-
-    for (const msg of messages) {
-      const wa_from = msg.from; // sender phone
-      const wa_message_id = msg.id;
-      const text = msg?.text?.body || "";
-
-      // save contact/lead
-      await db.query(
-        `
-        INSERT INTO whatsapp_contacts (wa_phone, last_message, last_message_at)
-        VALUES (?, ?, NOW())
-        ON DUPLICATE KEY UPDATE
-          last_message = VALUES(last_message),
-          last_message_at = NOW()
-        `,
-        [wa_from, text]
-      );
-
-      // save message
-      await db.query(
-        `
-        INSERT INTO whatsapp_messages (wa_message_id, wa_from, wa_to, direction, message_text)
-        VALUES (?, ?, ?, 'incoming', ?)
-        `,
-        [wa_message_id, wa_from, wa_to, text]
-      );
-    }
-
-    return res.status(200).send("EVENT_RECEIVED");
   } catch (err) {
-    console.error("webhook error:", err.message);
-    return res.status(200).send("EVENT_RECEIVED");
-  }
-});
 
+    console.error("WEBHOOK ERROR:",err);
+
+    return res.sendStatus(200);
+
+  }
+
+});
 /**
  * POST /api/whatsapp/send
  * body: { to, message }
