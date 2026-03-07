@@ -155,48 +155,7 @@ app.delete("/api/packages/delete/:id", async (req, res) => {
     }
 });
 
-// app.get('/webhook', (req, res) => {
-//     const VERIFY_TOKEN = "Travexa_Secret_123";
-//     const mode = req.query["hub.mode"];
-//     const token = req.query["hub.verify_token"];
-//     const challenge = req.query["hub.challenge"];
 
-//     if (mode && token) {
-//         if (mode === "subscribe" && token === VERIFY_TOKEN) {
-//             console.log("✅ WEBHOOK_VERIFIED");
-//             return res.status(200).send(challenge);
-//         } else {
-//             return res.sendStatus(403);
-//         }
-//     }
-// });
-
-// app.post('/webhook', async (req, res) => {
-//     const body = req.body;
-//     console.log("📩 Incoming Webhook:", JSON.stringify(body, null, 2));
-
-//     if (body.object === 'whatsapp_business_account') {
-//         const entry = body.entry?.[0];
-//         const value = entry?.changes?.[0]?.value;
-//         const message = value?.messages?.[0];
-
-//         if (message) {
-//             const sender_number = message.from;
-//             const message_text = message.text?.body || "";
-//             const sender_name = value.contacts?.[0]?.profile?.name || "Unknown";
-
-//             try {
-//                 const sql = "INSERT INTO messages (sender, message, name, type, created_at) VALUES (?, ?, ?, 'incoming', NOW())";
-//                 await db.query(sql, [sender_number, message_text, sender_name]);
-//                 console.log(`✅ Message from ${sender_name} saved.`);
-//             } catch (err) {
-//                 console.error("❌ DB Webhook Error:", err.message);
-//             }
-//         }
-//         return res.status(200).send('EVENT_RECEIVED');
-//     }
-//     res.sendStatus(404);
-// });
 app.get('/api/whatsapp/messages', async (req, res) => {
     try {
         const sql = `
@@ -265,11 +224,11 @@ try {
     app.use("/api/dashboard", dashboardRoutes);
     const integrationRoutes = require("./routes/integrationsroutes");
     app.use("/api/integrations", integrationRoutes);
-const webhookRoutes = require("./routes/metaWebhookRoutes");
+const webhookRoutes = require("./routes/metaWebhookroutes");
     app.use("/api/webhooks", webhookRoutes);
     const uniboxRoutes = require("./routes/uniboxRoutes");
     app.use("/api/unibox", uniboxRoutes);
-    app.use("/", require("./routes/whatsapp.webhook.routes"));
+app.use("/", require("./routes/whatsappwebhookroutes"));
     app.use("/api/ai", require("./routes/aiRoutes.js"));
     const internalChat = require("./routes/internalchat");
     app.use("/api/chat", internalChat);
